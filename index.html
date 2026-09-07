@@ -381,7 +381,7 @@ function buildSeries(rows, col, dateCol, startRow) {
    With no usable dates, fall back to the first row. */
 function nextIndex(series) {
   const today = todayMidnight();
-  const i = series.findIndex(e => e.date && e.date >= today);
+  const i = series.findIndex(e => e.date && e.date > today);
   if (i !== -1) return i;
   return series.some(e => e.date) ? -1 : 0;   // -1 = cycle finished
 }
