@@ -76,48 +76,58 @@
     font-size: 17px;
   }
 
-  .list { max-height: 340px; overflow-y: auto; scroll-behavior: smooth; }
+  .column-header .hint {
+    display: block;
+    margin-top: 3px;
+    font-weight: 500;
+    font-size: 12.5px;
+    color: #98a1ab;
+  }
+
+  .list { max-height: 360px; overflow-y: auto; scroll-behavior: smooth; }
 
   .person {
-    padding: 14px 20px;
+    padding: 13px 20px;
     border-bottom: 1px solid #eef0f2;
     color: #59636e;
     font-size: 15px;
-    transition: .2s ease;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 12px;
   }
 
   .person:last-child { border-bottom: 0; }
-  .person .who { flex: 1; }
-  .person .when { font-size: 12.5px; color: #98a1ab; white-space: nowrap; }
+  .person .who { flex: 1; min-width: 0; }
+  .person .who b { font-weight: 650; display: block; color: inherit; }
+  .person .who small {
+    display: block;
+    margin-top: 2px;
+    font-size: 14px;
+    color: #98a1ab;
+    font-weight: 400;
+  }
 
-  .person.past { color: #aab2bb; }
-  .person.past .when { color: #c3c9d0; }
+  .slot {
+    font-size: 14px;
+    white-space: nowrap;
+    color: #4c6b4a;
+    background: #eef5ed;
+    border: 1px solid #dbe8d9;
+    border-radius: 7px;
+    padding: 4px 8px;
+  }
+
+  .person.out { color: #aab2bb; }
+  .person.out .who small { color: #c3c9d0; font-style: italic; }
 
   .person.current {
     background: #e7f2e5;
     color: #203020;
-    font-weight: 750;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
   }
 
-  .person.current .when { color: #4c6b4a; }
-
-  .person.current::after {
-    content: "NEXT";
-    font-size: 10px;
-    letter-spacing: 1px;
-    padding: 4px 7px;
-    border-radius: 6px;
-    background: #72a66f;
-    color: white;
-    align-self: center;
-  }
+  .person.current .who b { font-weight: 750; }
+  .person.current .who small { color: #5b7a58; }
+  .person.current .slot { background: #72a66f; border-color: #72a66f; color: white; }
 
   .status {
     margin-bottom: 18px;
@@ -131,13 +141,12 @@
   .status.err  { background: #fdecec; border: 1px solid #f2c4c4; color: #8a2b2b; }
 
   footer { text-align: center; color: #8a929b; font-size: 12px; margin-top: 18px; }
-  footer a { color: #8a929b; }
 
   .skeleton { color: #b8c0c8; }
 
   @media (max-width: 700px) {
     .next, .schedule { grid-template-columns: 1fr; }
-    .list { max-height: 260px; }
+    .list { max-height: 280px; }
   }
 </style>
 </head>
@@ -155,24 +164,30 @@
     <div class="card next-card">
       <div class="label">Next Research Presentation</div>
       <div class="name skeleton" id="nextRP">Loading…</div>
-      <div class="duration" id="rpMeta">30 minutes</div>
+      <div class="duration" id="rpMeta">&nbsp;</div>
     </div>
 
     <div class="card next-card">
       <div class="label">Next General Presentation</div>
       <div class="name skeleton" id="nextGP">Loading…</div>
-      <div class="duration" id="gpMeta">15 minutes</div>
+      <div class="duration" id="gpMeta">&nbsp;</div>
     </div>
   </section>
 
   <section class="schedule">
     <div class="column">
-      <div class="column-header">Research Presentation</div>
+      <div class="column-header">
+        Research Presentation
+        <span class="hint">Longest since last RP first · tentative slots on the right</span>
+      </div>
       <div class="list" id="rpList"></div>
     </div>
 
     <div class="column">
-      <div class="column-header">General Presentation</div>
+      <div class="column-header">
+        General Presentation
+        <span class="hint">Longest since last GP first · tentative slots on the right</span>
+      </div>
       <div class="list" id="gpList"></div>
     </div>
   </section>
@@ -185,38 +200,38 @@
    CONFIG — the only part you need to edit.
    ============================================================
 
-   1. Open the Google Sheet. Its URL looks like:
-        https://docs.google.com/spreadsheets/d/1AbC...XyZ/edit#gid=0
-      Paste the long id between /d/ and /edit into SHEET_ID below.
+   Expected sheet layout (only the first three columns are read):
 
-   2. Share > General access > "Anyone with the link" > Viewer.
-      (Viewer is enough. The page only reads.)
+        A: Name      B: LastRp      C: LastGp
+        A            2026-04-04     2026-01-01
+        B            2026-02-03     2026-01-07
+        ...
 
+   A blank LastRp / LastGp means that person is not in that cycle.
+
+   1. Share > General access > "Anyone with the link" > Viewer.
+   2. SHEET_ID is the long id between /d/ and /edit in the sheet URL.
    3. SHEET_NAME must exactly match the tab name.
 
-   You can also override the sheet at runtime without editing this
-   file, by opening the page as:
-      page.html?id=<SHEET_ID>&sheet=<TAB_NAME>
+   You can override both at runtime without editing this file:
+      index.html?id=<SHEET_ID>&sheet=<TAB_NAME>
 ============================================================ */
-
 const CONFIG = {
-  SHEET_ID:   "1Ggq7IK7lP6_0BKzJapYUmvrR99oWeqyBGNm1U9N60Pk",
-  SHEET_NAME: "New Schedule",
+  SHEET_ID:   "1j_nWlWI1ZlCOAL6XeJCS_vlF4j7eFg7nQ8KvkqCHJAE",
+  SHEET_NAME: "Schedule",
   RP_MINUTES: "30 minutes",
   GP_MINUTES: "30 minutes",
-  DAY_FIRST:  true   // dates in the sheet read as DD-MM-YY (31-08-26 = 31 Aug 2026)
+
+  /* Tentative dates are laid out on these meeting days. */
+  MEETING_WEEKDAY: "Monday",  // Sunday … Saturday
+  INTERVAL_WEEKS:  1,           // 1 = every week, 2 = fortnightly, …
+  DAY_FIRST: true               // 28-02-2026 reads as 28 Feb 2026
 };
 
-/* Fallback used only if the sheet cannot be reached (offline, link
-   revoked, etc). Snapshot of the spreadsheet as supplied. */
-const FALLBACK = {
-  rp: [
-    ["can't load data","dd-mm-yy"]
-  ],
-  gp: [
-    ["can't load data","dd-mm-yy"]
-  ]
-};
+/* Used only if the sheet cannot be reached (offline, link revoked…). */
+const FALLBACK = [
+  { name: "can't load data", lastRp: "", lastGp: "" }
+];
 
 /* ---------- helpers ---------- */
 
@@ -259,14 +274,14 @@ function parseCSV(text) {
   let buf = "";
   for (const line of raw) {
     buf = buf ? buf + "\n" + line : line;
-    const quotes = (buf.match(/"/g) || []).length;
-    if (quotes % 2 === 0) { rows.push(splitCSVLine(buf)); buf = ""; }
+    if (((buf.match(/"/g) || []).length) % 2 === 0) { rows.push(splitCSVLine(buf)); buf = ""; }
   }
   if (buf) rows.push(splitCSVLine(buf));
   return rows;
 }
 
 const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 
 /* Tolerant date parser. Returns a Date at local midnight, or null. */
 function parseDate(s) {
@@ -274,8 +289,12 @@ function parseDate(s) {
   s = String(s).trim();
   if (!s) return null;
 
-  // ISO first: 2026-09-07 (optionally with a time part)
-  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  // gviz sometimes emits Date(2026,3,4) — month is 0-based there.
+  let m = s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);
+  if (m) return new Date(+m[1], +m[2], +m[3]);
+
+  // ISO: 2026-04-04, optionally with a time part
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
 
   // 7 Sep 2026 / Sep 7, 2026
@@ -286,10 +305,10 @@ function parseDate(s) {
   if (m && MONTHS[m[1].slice(0,3).toLowerCase()] !== undefined)
     return new Date(fullYear(+m[3]), MONTHS[m[1].slice(0,3).toLowerCase()], +m[2]);
 
-  // Numeric: 31-08-26, 31/08/2026, 8/31/2026
+  // Numeric: 28-02-2026, 31/08/26, 8/31/2026
   m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
   if (m) {
-    let a = +m[1], b = +m[2], y = fullYear(+m[3]);
+    const a = +m[1], b = +m[2], y = fullYear(+m[3]);
     let day, mon;
     if (a > 12)      { day = a; mon = b; }   // unambiguous
     else if (b > 12) { day = b; mon = a; }
@@ -297,6 +316,7 @@ function parseDate(s) {
                        mon = CONFIG.DAY_FIRST ? b : a; }
     return new Date(y, mon - 1, day);
   }
+
   const d = new Date(s);
   return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
@@ -308,21 +328,44 @@ function fmtDate(d) {
     { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 }
 
+function fmtShort(d) {
+  return d ? d.toLocaleDateString(undefined,
+    { day: "numeric", month: "short", year: "numeric" }) : "";
+}
+
 function todayMidnight() {
   const n = new Date();
   return new Date(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
+/* Meeting slots: the next MEETING_WEEKDAY after today, then every
+   INTERVAL_WEEKS weeks. */
+function meetingSlots(count) {
+  const want = Math.max(0, WEEKDAYS.indexOf(String(CONFIG.MEETING_WEEKDAY).toLowerCase()));
+  const d = todayMidnight();
+  d.setDate(d.getDate() + ((want - d.getDay() + 7) % 7 || 7));   // strictly after today
+
+  const slots = [];
+  const step = Math.max(1, CONFIG.INTERVAL_WEEKS) * 7;
+  for (let i = 0; i < count; i++) {
+    slots.push(new Date(d));
+    d.setDate(d.getDate() + step);
+  }
+  return slots;
+}
+
 /* ---------- fetching ---------- */
 
-/* gviz is the endpoint that reliably sends CORS headers for a
-   link-shared sheet. The /export endpoint is kept as a backup. */
+/* gviz reliably sends CORS headers for a link-shared sheet.
+   /export is the backup; the last URL drops the tab name and takes
+   the first sheet, in case the tab was renamed. */
 function endpoints(id, tab) {
   const bust = "&_=" + Date.now();
   const base = "https://docs.google.com/spreadsheets/d/" + encodeURIComponent(id);
   return [
     base + "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(tab) + bust,
-    base + "/export?format=csv&sheet=" + encodeURIComponent(tab) + bust
+    base + "/export?format=csv&sheet=" + encodeURIComponent(tab) + bust,
+    base + "/gviz/tq?tqx=out:csv" + bust
   ];
 }
 
@@ -342,128 +385,127 @@ async function fetchSheet(id, tab) {
 
 /* ---------- shaping the rows ---------- */
 
-/* Find the header row and the columns we care about, so inserting or
-   moving a column in the sheet does not break the page. */
-function locateColumns(rows) {
+/* Only the first three columns matter: Name, LastRp, LastGp.
+   The header row is detected so a stray title row above it is fine. */
+function firstDataRow(rows) {
   for (let r = 0; r < Math.min(rows.length, 12); r++) {
-    const cells = rows[r].map(c => c.toLowerCase());
-    const rp = cells.findIndex(c => c.includes("research"));
-    const gp = cells.findIndex(c => c.includes("general"));
-    if (rp === -1 || gp === -1) continue;
-    let dt = cells.findIndex(c => c.includes("date"));
-    if (dt === -1) dt = null;
-    return { headerRow: r, rp, gp, dt };
+    const c = rows[r].map(x => (x || "").toLowerCase().replace(/\s/g, ""));
+    const looksLikeHeader = c[0].includes("name") &&
+      (c[1] || "").match(/rp|research/) && (c[2] || "").match(/gp|general/);
+    if (looksLikeHeader) return r + 1;
   }
-  return null;
+  return 0;   // no header found — assume data starts at the top
 }
 
-/* Ignore rows that are legend text or the "30 min / 15 min" footer. */
-function isNoise(name) {
-  const n = name.toLowerCase();
-  return !name
-      || /^\d+\s*min/.test(n)
-      || n.includes("color indicat")
-      || n.includes("colour indicat");
-}
-
-function buildSeries(rows, col, dateCol, startRow) {
-  const out = [];
-  for (let r = startRow; r < rows.length; r++) {
-    const name = (rows[r][col] || "").trim();
-    if (isNoise(name)) continue;
-    const dateStr = dateCol == null ? "" : (rows[r][dateCol] || "").trim();
-    out.push({ name, date: parseDate(dateStr), raw: dateStr });
+function buildPeople(rows) {
+  const start = firstDataRow(rows);
+  const people = [];
+  for (let r = start; r < rows.length; r++) {
+    const name = (rows[r][0] || "").trim();
+    if (!name) continue;
+    people.push({
+      name,
+      lastRp: parseDate((rows[r][1] || "").trim()),
+      lastGp: parseDate((rows[r][2] || "").trim())
+    });
   }
-  return out;
+  return people;
 }
 
-/* The next presenter is the first entry dated today or later.
-   With no usable dates, fall back to the first row. */
-function nextIndex(series) {
-  const today = todayMidnight();
-  const i = series.findIndex(e => e.date && e.date > today);
-  if (i !== -1) return i;
-  return series.some(e => e.date) ? -1 : 0;   // -1 = cycle finished
+/* Queue for one cycle: everybody with a last-presented date, oldest
+   first, then the people with a blank cell (not in that cycle). */
+function buildQueue(people, key) {
+  const inCycle = people
+    .filter(p => p[key])
+    .sort((a, b) => a[key] - b[key] || a.name.localeCompare(b.name));
+
+  const slots = meetingSlots(inCycle.length);
+  const queue = inCycle.map((p, i) => ({ name: p.name, last: p[key], slot: slots[i] }));
+
+  people
+    .filter(p => !p[key])
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(p => queue.push({ name: p.name, last: null, slot: null }));
+
+  return queue;
 }
 
 /* ---------- rendering ---------- */
 
-function render(listId, nameId, metaId, series, minutes) {
+function render(listId, nameId, metaId, queue, minutes) {
   const el = $(listId);
   el.innerHTML = "";
-  const idx = nextIndex(series);
 
-  series.forEach((entry, i) => {
+  queue.forEach((entry, i) => {
     const row = document.createElement("div");
     row.className = "person"
-      + (i === idx ? " current" : "")
-      + (idx !== -1 && i < idx ? " past" : "");
+      + (entry.slot && i === 0 ? " current" : "")
+      + (entry.last ? "" : " out");
 
     const who = document.createElement("span");
     who.className = "who";
-    who.textContent = entry.name;
+
+    const nm = document.createElement("b");
+    nm.textContent = entry.name;
+    who.appendChild(nm);
+
+    const sub = document.createElement("small");
+    sub.textContent = entry.last ? "Last presented " + fmtShort(entry.last) : "Not in the loop";
+    who.appendChild(sub);
     row.appendChild(who);
 
-    if (entry.date || entry.raw) {
-      const when = document.createElement("span");
-      when.className = "when";
-      when.textContent = entry.date ? fmtDate(entry.date) : entry.raw;
-      row.appendChild(when);
+    if (entry.slot) {
+      const slot = document.createElement("span");
+      slot.className = "slot";
+      slot.textContent = fmtShort(entry.slot);
+      row.appendChild(slot);
     }
     el.appendChild(row);
   });
 
   const nameEl = $(nameId);
   nameEl.classList.remove("skeleton");
-  if (idx === -1) {
-    nameEl.textContent = "Cycle complete";
-    $(metaId).textContent = "No upcoming slot in the sheet";
+  const next = queue.find(e => e.slot);
+
+  if (!next) {
+    nameEl.textContent = "Nobody in cycle";
+    $(metaId).textContent = "No last-presented dates in the sheet";
   } else {
-    const e = series[idx];
-    nameEl.textContent = e.name;
-    $(metaId).textContent = minutes + (e.date ? " · " + fmtDate(e.date) : "");
+    nameEl.textContent = next.name;
+    $(metaId).textContent = minutes + " · " + fmtDate(next.slot)
   }
 
-  const cur = el.querySelector(".current");
-  if (cur) requestAnimationFrame(() => {
-    el.scrollTop = Math.max(0, cur.offsetTop - el.clientHeight / 2 + cur.offsetHeight / 2);
-  });
+  el.scrollTop = 0;
 }
 
-function paint(rp, gp, note) {
-  render("rpList", "nextRP", "rpMeta", rp, CONFIG.RP_MINUTES);
-  render("gpList", "nextGP", "gpMeta", gp, CONFIG.GP_MINUTES);
+function paint(people, note) {
+  render("rpList", "nextRP", "rpMeta", buildQueue(people, "lastRp"), CONFIG.RP_MINUTES);
+  render("gpList", "nextGP", "gpMeta", buildQueue(people, "lastGp"), CONFIG.GP_MINUTES);
   $("footer").textContent = note;
 }
 
 function useFallback(reason) {
   setStatus(reason + " Showing the last saved copy of the schedule, which may be out of date.", "err");
-  const wrap = a => a.map(([name, raw]) => ({ name, date: parseDate(raw), raw }));
-  paint(wrap(FALLBACK.rp), wrap(FALLBACK.gp), "Offline copy · not live");
+  paint(FALLBACK.map(p => ({
+    name: p.name, lastRp: parseDate(p.lastRp), lastGp: parseDate(p.lastGp)
+  })), "Offline copy · not live");
 }
 
 /* ---------- go ---------- */
 
 (async function init() {
-  if (!sheetId || sheetId === "PASTE_YOUR_SHEET_ID_HERE") {
-    useFallback("No Google Sheet ID has been set in this page yet.");
-    return;
-  }
-
   try {
-    const csv  = await fetchSheet(sheetId, tabName);
-    const rows = parseCSV(csv).filter(r => r.some(c => c !== ""));
-    const cols = locateColumns(rows);
-    if (!cols) throw new Error('No "Research"/"General" header row found in tab "' + tabName + '"');
-
-    const rp = buildSeries(rows, cols.rp, cols.dt, cols.headerRow + 1);
-    const gp = buildSeries(rows, cols.gp, cols.dt, cols.headerRow + 1);
-    if (!rp.length && !gp.length) throw new Error("The sheet has no presenter rows");
+    const csv    = await fetchSheet(sheetId, tabName);
+    const rows   = parseCSV(csv).filter(r => r.some(c => c !== ""));
+    const people = buildPeople(rows);
+    if (!people.length) throw new Error("The sheet has no presenter rows");
 
     setStatus(null);
-    paint(rp, gp, "Live from Google Sheets · loaded " +
+    paint(people, "Live from Google Sheets · loaded " +
       new Date().toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) +
-      " · refresh the page to pull the latest");
+      " · tentative slots assume every " +
+      (CONFIG.INTERVAL_WEEKS > 1 ? CONFIG.INTERVAL_WEEKS + " weeks on " : "") +
+      CONFIG.MEETING_WEEKDAY + " · refresh to pull the latest");
   } catch (err) {
     useFallback("Could not load the sheet (" + err.message + ").");
   }
