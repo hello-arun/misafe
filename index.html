@@ -117,6 +117,13 @@
     padding: 4px 8px;
   }
 
+  .slot.away {
+    color: #98a1ab;
+    background: #f2f4f6;
+    border-color: #e4e8ec;
+    font-style: italic;
+  }
+
   .person.out { color: #aab2bb; }
   .person.out .who small { color: #c3c9d0; font-style: italic; }
 
@@ -162,13 +169,13 @@
 
   <section class="next">
     <div class="card next-card">
-      <div class="label">Next Research Presentation</div>
+      <div class="label" id="rpLabel">Next Research Presentation</div>
       <div class="name skeleton" id="nextRP">Loading…</div>
       <div class="duration" id="rpMeta">&nbsp;</div>
     </div>
 
     <div class="card next-card">
-      <div class="label">Next General Presentation</div>
+      <div class="label" id="gpLabel">Next General Presentation</div>
       <div class="name skeleton" id="nextGP">Loading…</div>
       <div class="duration" id="gpMeta">&nbsp;</div>
     </div>
@@ -200,14 +207,16 @@
    CONFIG — the only part you need to edit.
    ============================================================
 
-   Expected sheet layout (only the first three columns are read):
+   Expected sheet layout (only the first four columns are read):
 
-        A: Name      B: LastRp      C: LastGp
-        A            2026-04-04     2026-01-01
-        B            2026-02-03     2026-01-07
+        A: Name      B: LastRp      C: LastGp      D: Available
+        A            2026-04-04     2026-01-01     Yes
+        B            2026-02-03     2026-01-07     No
         ...
 
-   A blank LastRp / LastGp means that person is not in that cycle.
+   A blank LastRp / LastGp means that person is not in that loop.
+   "No" in column D takes the person out of both RP and GP until it
+   is changed back; a blank cell counts as available.
 
    1. Share > General access > "Anyone with the link" > Viewer.
    2. SHEET_ID is the long id between /d/ and /edit in the sheet URL.
@@ -216,15 +225,17 @@
    You can override both at runtime without editing this file:
       index.html?id=<SHEET_ID>&sheet=<TAB_NAME>
 ============================================================ */
+
 const CONFIG = {
   SHEET_ID:   "1j_nWlWI1ZlCOAL6XeJCS_vlF4j7eFg7nQ8KvkqCHJAE",
-  SHEET_NAME: "Schedule",
+  SHEET_NAME: "New Schedule",
   RP_MINUTES: "30 minutes",
   GP_MINUTES: "30 minutes",
 
   /* Tentative dates are laid out on these meeting days. */
-  MEETING_WEEKDAY: "Monday",  // Sunday … Saturday
+  MEETING_WEEKDAY: "Tuesday",  // Sunday … Saturday
   INTERVAL_WEEKS:  1,           // 1 = every week, 2 = fortnightly, …
+
   DAY_FIRST: true               // 28-02-2026 reads as 28 Feb 2026
 };
 
@@ -338,12 +349,17 @@ function todayMidnight() {
   return new Date(n.getFullYear(), n.getMonth(), n.getDate());
 }
 
-/* Meeting slots: the next MEETING_WEEKDAY after today, then every
-   INTERVAL_WEEKS weeks. */
+function isToday(d) {
+  return !!d && d.getTime() === todayMidnight().getTime();
+}
+
+/* Meeting slots: the next MEETING_WEEKDAY from today onwards, then
+   every INTERVAL_WEEKS weeks. Today counts, so the page still shows
+   the meeting on the morning of the meeting itself. */
 function meetingSlots(count) {
   const want = Math.max(0, WEEKDAYS.indexOf(String(CONFIG.MEETING_WEEKDAY).toLowerCase()));
   const d = todayMidnight();
-  d.setDate(d.getDate() + ((want - d.getDay() + 7) % 7 || 7));   // strictly after today
+  d.setDate(d.getDate() + ((want - d.getDay() + 7) % 7));
 
   const slots = [];
   const step = Math.max(1, CONFIG.INTERVAL_WEEKS) * 7;
@@ -397,6 +413,12 @@ function firstDataRow(rows) {
   return 0;   // no header found — assume data starts at the top
 }
 
+/* Column D. Blank means available; anything starting with n / f / 0
+   (No, Not available, false…) takes the person out of both RP and GP. */
+function isUnavailable(cell) {
+  return /^(n|f|0|unavail)/.test(String(cell || "").trim().toLowerCase());
+}
+
 function buildPeople(rows) {
   const start = firstDataRow(rows);
   const people = [];
@@ -406,33 +428,40 @@ function buildPeople(rows) {
     people.push({
       name,
       lastRp: parseDate((rows[r][1] || "").trim()),
-      lastGp: parseDate((rows[r][2] || "").trim())
+      lastGp: parseDate((rows[r][2] || "").trim()),
+      away:   isUnavailable(rows[r][3])
     });
   }
   return people;
 }
 
-/* Queue for one cycle: everybody with a last-presented date, oldest
-   first, then the people with a blank cell (not in that cycle). */
+/* Queue for one cycle:
+     1. available people with a last-presented date — oldest first,
+        these are the ones that get tentative slots;
+     2. unavailable people - listed, dated, but never scheduled;
+     3. people with a blank date cell - not in that cycle.
+   Sorting inside each group is by last-presented date, then name. */
 function buildQueue(people, key) {
-  const inCycle = people
-    .filter(p => p[key])
-    .sort((a, b) => a[key] - b[key] || a.name.localeCompare(b.name));
+  const byDate = (a, b) => a[key] - b[key] || a.name.localeCompare(b.name);
+  const byName = (a, b) => a.name.localeCompare(b.name);
 
-  const slots = meetingSlots(inCycle.length);
-  const queue = inCycle.map((p, i) => ({ name: p.name, last: p[key], slot: slots[i] }));
+  const inLoop = people.filter(p => p[key] && !p.away).sort(byDate);
+  const slots   = meetingSlots(inLoop.length);
 
-  people
-    .filter(p => !p[key])
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .forEach(p => queue.push({ name: p.name, last: null, slot: null }));
+  const queue = inLoop.map((p, i) => ({ name: p.name, last: p[key], slot: slots[i] }));
+
+  people.filter(p => p[key] && p.away).sort(byDate)
+    .forEach(p => queue.push({ name: p.name, last: p[key], slot: null, away: true }));
+
+  people.filter(p => !p[key]).sort(byName)
+    .forEach(p => queue.push({ name: p.name, last: null, slot: null, away: p.away }));
 
   return queue;
 }
 
 /* ---------- rendering ---------- */
 
-function render(listId, nameId, metaId, queue, minutes) {
+function render(listId, nameId, metaId, labelId, label, queue, minutes) {
   const el = $(listId);
   el.innerHTML = "";
 
@@ -440,7 +469,7 @@ function render(listId, nameId, metaId, queue, minutes) {
     const row = document.createElement("div");
     row.className = "person"
       + (entry.slot && i === 0 ? " current" : "")
-      + (entry.last ? "" : " out");
+      + (entry.last && !entry.away ? "" : " out");
 
     const who = document.createElement("span");
     who.className = "who";
@@ -454,10 +483,10 @@ function render(listId, nameId, metaId, queue, minutes) {
     who.appendChild(sub);
     row.appendChild(who);
 
-    if (entry.slot) {
+    if (entry.slot || entry.away) {
       const slot = document.createElement("span");
-      slot.className = "slot";
-      slot.textContent = fmtShort(entry.slot);
+      slot.className = "slot" + (entry.away ? " away" : "");
+      slot.textContent = entry.away ? "Unavailable" : fmtShort(entry.slot);
       row.appendChild(slot);
     }
     el.appendChild(row);
@@ -468,19 +497,24 @@ function render(listId, nameId, metaId, queue, minutes) {
   const next = queue.find(e => e.slot);
 
   if (!next) {
+    $(labelId).textContent = "Next " + label;
     nameEl.textContent = "Nobody in cycle";
-    $(metaId).textContent = "No last-presented dates in the sheet";
+    $(metaId).textContent = "No available presenter with a last-presented date";
   } else {
+    const today = isToday(next.slot);
+    $(labelId).textContent = today ? "Today's " + label : "Next " + label;
     nameEl.textContent = next.name;
-    $(metaId).textContent = minutes + " · " + fmtDate(next.slot)
+    $(metaId).textContent = minutes + " · " + (today ? "Today, " : "") + fmtDate(next.slot);
   }
 
   el.scrollTop = 0;
 }
 
 function paint(people, note) {
-  render("rpList", "nextRP", "rpMeta", buildQueue(people, "lastRp"), CONFIG.RP_MINUTES);
-  render("gpList", "nextGP", "gpMeta", buildQueue(people, "lastGp"), CONFIG.GP_MINUTES);
+  render("rpList", "nextRP", "rpMeta", "rpLabel", "Research Presentation",
+         buildQueue(people, "lastRp"), CONFIG.RP_MINUTES);
+  render("gpList", "nextGP", "gpMeta", "gpLabel", "General Presentation",
+         buildQueue(people, "lastGp"), CONFIG.GP_MINUTES);
   $("footer").textContent = note;
 }
 
