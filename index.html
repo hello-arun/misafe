@@ -227,13 +227,13 @@
 ============================================================ */
 
 const CONFIG = {
-  SHEET_ID:   "1j_nWlWI1ZlCOAL6XeJCS_vlF4j7eFg7nQ8KvkqCHJAE",
-  SHEET_NAME: "New Schedule",
+  SHEET_ID:   "1Ggq7IK7lP6_0BKzJapYUmvrR99oWeqyBGNm1U9N60Pk",
+  SHEET_NAME: "New Format",
   RP_MINUTES: "30 minutes",
   GP_MINUTES: "30 minutes",
 
   /* Tentative dates are laid out on these meeting days. */
-  MEETING_WEEKDAY: "Tuesday",  // Sunday … Saturday
+  MEETING_WEEKDAY: "Monday",  // Sunday … Saturday
   INTERVAL_WEEKS:  1,           // 1 = every week, 2 = fortnightly, …
 
   DAY_FIRST: true               // 28-02-2026 reads as 28 Feb 2026
@@ -248,7 +248,7 @@ const FALLBACK = [
 
 const params  = new URLSearchParams(location.search);
 const sheetId = params.get("id")    || CONFIG.SHEET_ID;
-const tabName = params.get("sheet") || CONFIG.SHEET_NAME;
+const tabName = params.get("New Format") || CONFIG.SHEET_NAME;
 
 const $ = id => document.getElementById(id);
 
