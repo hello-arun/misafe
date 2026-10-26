@@ -155,6 +155,19 @@
     .next, .schedule { grid-template-columns: 1fr; }
     .list { max-height: 280px; }
   }
+  .archive { text-align: center; margin-top: 10px; }
+.archive a {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid #e2e7ec;
+  color: #4c6b4a;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.archive a:hover { background: #eef5ed; }
 </style>
 </head>
 
@@ -200,6 +213,12 @@
   </section>
 
   <footer id="footer">Fetching the latest schedule…</footer>
+  <footer id="footer">Fetching the latest schedule…</footer>
+<div class="archive">
+  <a href="https://drive.google.com/drive/folders/1ZGEtBOKayiDeh9-EAxsC1_7pC4n2rriJ" target="_blank" rel="noopener noreferrer">
+    📁 Past presentations
+  </a>
+</div>
 </div>
 
 <script>
@@ -515,7 +534,7 @@ function paint(people, note) {
          buildQueue(people, "lastRp"), CONFIG.RP_MINUTES);
   render("gpList", "nextGP", "gpMeta", "gpLabel", "General Presentation",
          buildQueue(people, "lastGp"), CONFIG.GP_MINUTES);
-  $("footer").textContent = note;
+  $("footer").innerHTML = note;
 }
 
 function useFallback(reason) {
@@ -535,7 +554,9 @@ function useFallback(reason) {
     if (!people.length) throw new Error("The sheet has no presenter rows");
 
     setStatus(null);
-    paint(people, "Live from Google Sheets · loaded " +
+    paint(people,   'Live from <a href="https://docs.google.com/spreadsheets/d/' +
+    sheetId +
+    '" target="_blank" rel="noopener noreferrer">Google Sheets</a> · loaded ' +
       new Date().toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) +
       " · tentative slots assume every " +
       (CONFIG.INTERVAL_WEEKS > 1 ? CONFIG.INTERVAL_WEEKS + " weeks on " : "") +
